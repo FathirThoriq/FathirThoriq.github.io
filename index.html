@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="gate-locked">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -58,7 +58,10 @@
         position: fixed; inset: 0;
         z-index: 2;
         overflow: hidden;
+        transition: opacity .8s ease;
       }
+      body.gate-on #scene { opacity: 0; }
+      html.gate-locked, body.gate-locked { overflow: hidden; }
 
       /* ---------- stages ---------- */
       .stage {
@@ -428,7 +431,8 @@
       .works-foot a:hover { color: var(--ink); text-decoration: underline; }
 
       /* ---------- HUD ---------- */
-      .hud { position: fixed; z-index: 10; font-family: var(--mono); }
+      .hud { position: fixed; z-index: 10; font-family: var(--mono); transition: opacity .5s ease; }
+      body.gate-on .hud { opacity: 0; pointer-events: none; }
       .hud-top-left { top: 18px; left: 22px; }
       .wordmark {
         font-family: var(--serif);
@@ -626,6 +630,52 @@
         background: var(--ink);
       }
 
+      /* ---------- crystal gate ---------- */
+      #gate {
+        position: fixed; inset: 0;
+        z-index: 35;
+        background: radial-gradient(ellipse at 50% 44%, rgba(13,17,23,0.18) 26%, rgba(13,17,23,0.66) 100%);
+        transition: opacity .8s ease;
+      }
+      #gate.gone { opacity: 0; pointer-events: none; }
+      #gateCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .gate-ui {
+        position: absolute; left: 50%; bottom: max(7vh, 44px);
+        transform: translateX(-50%);
+        display: flex; flex-direction: column; align-items: center; gap: 11px;
+        z-index: 2;
+        text-align: center;
+        max-width: 92vw;
+      }
+      .gate-label {
+        font-family: var(--mono);
+        font-size: 11px; letter-spacing: .38em; text-indent: .38em;
+        color: var(--dim);
+        margin: 0;
+      }
+      .gate-sub {
+        font-family: var(--mono);
+        font-size: 10px; letter-spacing: .18em;
+        color: var(--dim);
+        margin: 0;
+        white-space: nowrap;
+      }
+      #gateEnter {
+        appearance: none;
+        background: var(--glass);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink);
+        font-family: var(--mono);
+        font-size: 11px; letter-spacing: .3em; text-indent: .3em;
+        padding: 10px 24px;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: border-color .25s ease;
+      }
+      #gateEnter:hover, #gateEnter:focus-visible { border-color: #6e7681; outline: none; }
+
       /* ---------- responsive ---------- */
       @media (max-width: 720px) {
         .stage { padding: 76px 14px 106px; }
@@ -661,10 +711,11 @@
         .graph-line { stroke-dashoffset: 0; }
         .graph-dot { opacity: 1; }
         #loader { transition: none; }
+        #gateEnter { border-color: #8b949e; }
       }
     </style>
   </head>
-  <body>
+  <body class="gate-on gate-locked">
     <!-- scroll track -->
     <div id="spacer" aria-hidden="true"></div>
 
@@ -984,6 +1035,17 @@ ccccccccccccccccccccccccccccc:'.
       <span class="c-label">TEARS</span>
     </div>
 
+    <!-- crystal gate: held after the loader until the first scroll -->
+    <div id="gate" role="dialog" aria-modal="true" aria-label="Kristal Pisces — scroll untuk masuk">
+      <canvas id="gateCanvas" aria-hidden="true"></canvas>
+      <div class="gate-ui">
+        <p class="gate-label">P I S C E S</p>
+        <span class="scroll-pill">SCROLL <span class="chev">⌄</span></span>
+        <p class="gate-sub">scroll untuk memecahkan kristal</p>
+        <button id="gateEnter" type="button">MASUK</button>
+      </div>
+    </div>
+
     <!-- loader -->
     <div id="loader" role="status" aria-label="Loading">
       <div class="l-mark">TEARS</div>
@@ -997,13 +1059,15 @@ ccccccccccccccccccccccccccccc:'.
         var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         var finePointer = window.matchMedia("(pointer: fine)").matches;
         var N = 5;
+        var gateActive = true;   /* crystal gate holds the journey until it breaks */
+        var gateArmed = false;   /* triggers arm once the loader reaches 100 */
 
         /* ================= LOADER ================= */
         var loader = document.getElementById("loader");
         var loadNum = document.getElementById("loadNum");
         var loadBar = document.getElementById("loadBar");
         var loadStart = performance.now();
-        var LOAD_MS = reduced ? 60 : 1150;
+        var LOAD_MS = reduced ? 60 : 3250;
         function loadTick(now) {
           var p = Math.min((now - loadStart) / LOAD_MS, 1);
           var eased = 1 - Math.pow(1 - p, 2.2);
@@ -1011,11 +1075,11 @@ ccccccccccccccccccccccccccccc:'.
           loadNum.textContent = val;
           loadBar.style.width = val + "%";
           if (p < 1) requestAnimationFrame(loadTick);
-          else setTimeout(function () { loader.classList.add("done"); }, 120);
+          else setTimeout(function () { loader.classList.add("done"); gateArmed = true; }, 120);
         }
         requestAnimationFrame(loadTick);
         /* hard safety: loader never traps the page */
-        setTimeout(function () { loader.classList.add("done"); }, 2400);
+        setTimeout(function () { loader.classList.add("done"); gateArmed = true; }, 5600);
 
         /* ================= TYPING ROTATOR ================= */
         var phrases = ["THE WORLD IS YOURS.", "Magis Minoris Felicior", "FULL-STACK APPRENTICE"];
@@ -1143,6 +1207,7 @@ ccccccccccccccccccccccccccccc:'.
           return Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         }
         function goToStage(i) {
+          if (gateActive) return;
           i = Math.max(0, Math.min(N - 1, i));
           window.scrollTo({ top: (i / (N - 1)) * maxScroll(), behavior: reduced ? "auto" : "smooth" });
         }
@@ -1154,6 +1219,7 @@ ccccccccccccccccccccccccccccc:'.
           else goToStage(activeIdx + 1);
         });
         document.addEventListener("keydown", function (e) {
+          if (gateActive) return;
           if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); goToStage(activeIdx + 1); }
           if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); goToStage(activeIdx - 1); }
         });
@@ -1204,21 +1270,23 @@ ccccccccccccccccccccccccccccc:'.
 
         /* ================= PISCES CONSTELLATION =================
            Stylised Pisces in normalised canvas coords: two cords of stars
-           meet at the knot (Alrescha, bottom centre). The western cord climbs
-           to the Circlet (small ring, top left); the northern cord runs right.
+           meet at the knot (Alrescha, lower left of centre). The western
+           cord climbs with long strides to the Circlet (ring, top left);
+           the northern cord runs far right to the second fish's head.
+           The figure is spread wide so the two-fish pattern reads clearly.
            Lines are drawn segment by segment with overall scroll progress:
            0 at HERO, the whole figure complete at WORKS. */
         var PISCES = (function () {
-          var knot = [0.50, 0.80];
-          var west = [[0.472, 0.715], [0.452, 0.635], [0.435, 0.555], [0.42, 0.475], [0.40, 0.40], [0.382, 0.33]];
+          var knot = [0.44, 0.86];
+          var west = [[0.408, 0.745], [0.378, 0.635], [0.35, 0.53], [0.324, 0.435], [0.296, 0.345], [0.268, 0.265]];
           var circlet = [];
-          var cc = [0.358, 0.242], crx = 0.056, cry = 0.044;
+          var cc = [0.228, 0.165], crx = 0.082, cry = 0.062;
           for (var a = 0; a < 6; a++) {
             var ang = 2.35 + a * (Math.PI * 2 / 6);
             circlet.push([cc[0] + Math.cos(ang) * crx, cc[1] + Math.sin(ang) * cry]);
           }
-          var north = [[0.558, 0.75], [0.612, 0.70], [0.662, 0.652], [0.708, 0.608], [0.75, 0.568], [0.788, 0.532], [0.822, 0.50]];
-          var head = [[0.852, 0.468], [0.878, 0.43]];
+          var north = [[0.525, 0.795], [0.605, 0.735], [0.678, 0.68], [0.745, 0.63], [0.805, 0.585], [0.858, 0.545], [0.905, 0.51]];
+          var head = [[0.938, 0.468], [0.962, 0.425]];
 
           var segs = [];        /* [x1,y1,x2,y2] in draw order */
           var starPts = [];     /* {p:[x,y], at:segment index when it lights, r} */
@@ -1226,7 +1294,7 @@ ccccccccccccccccccccccccccccc:'.
           var prev = knot, i, p;
           for (i = 0; i < west.length; i++) { p = west[i]; segs.push([prev, p]); starPts.push({ p: p, at: segs.length, r: 2.8 }); prev = p; }
           var loop = circlet.concat([circlet[0]]);
-          for (i = 0; i < loop.length; i++) { p = loop[i]; segs.push([prev, p]); if (i < circlet.length) starPts.push({ p: p, at: segs.length, r: 3.8 }); prev = p; }
+          for (i = 0; i < loop.length; i++) { p = loop[i]; segs.push([prev, p]); if (i < circlet.length) starPts.push({ p: p, at: segs.length, r: 3.3 }); prev = p; }
           prev = knot;
           var tail = north.concat(head);
           for (i = 0; i < tail.length; i++) { p = tail[i]; segs.push([prev, p]); starPts.push({ p: p, at: segs.length, r: 2.8 }); prev = p; }
@@ -1237,11 +1305,12 @@ ccccccccccccccccccccccccccccc:'.
           var drawn = progress * PISCES.total;
           var i, f, a, b, x1, y1, x2, y2;
           ctx.save();
-          /* two passes per segment: a wide soft silver glow underneath,
-             then a bright core line so the two cords read clearly */
+          /* two passes per segment: only a whisper of under-glow, then a
+             bright core line — the cords must read as crisp lines joining
+             separate points, not as a blurred ribbon of light */
           for (var pass = 0; pass < 2; pass++) {
-            ctx.lineWidth = pass === 0 ? 6.5 : 2.1;
-            ctx.strokeStyle = pass === 0 ? "rgba(196,206,218,0.13)" : "rgba(222,229,237,0.88)";
+            ctx.lineWidth = pass === 0 ? 2.8 : 2.1;
+            ctx.strokeStyle = pass === 0 ? "rgba(196,206,218,0.10)" : "rgba(222,229,237,0.88)";
             ctx.lineCap = "round";
             for (i = 0; i < PISCES.segs.length; i++) {
               f = drawn - i;
@@ -1259,12 +1328,12 @@ ccccccccccccccccccccccccccccc:'.
             if (drawn < s.at - 0.001) continue;
             var sx = s.p[0] * W, sy = s.p[1] * H;
             var tw = reduced ? 0.95 : 0.82 + 0.18 * Math.sin(now * 0.0012 + i * 1.7);
-            var glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, s.r * 4.5);
-            glow.addColorStop(0, "rgba(238,243,248," + (0.55 * tw).toFixed(3) + ")");
-            glow.addColorStop(0.35, "rgba(210,218,228," + (0.22 * tw).toFixed(3) + ")");
+            var glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, s.r * 1.4);
+            glow.addColorStop(0, "rgba(238,243,248," + (0.32 * tw).toFixed(3) + ")");
+            glow.addColorStop(0.5, "rgba(210,218,228," + (0.09 * tw).toFixed(3) + ")");
             glow.addColorStop(1, "rgba(210,218,228,0)");
             ctx.fillStyle = glow;
-            ctx.beginPath(); ctx.arc(sx, sy, s.r * 4.5, 0, 6.2832); ctx.fill();
+            ctx.beginPath(); ctx.arc(sx, sy, s.r * 1.4, 0, 6.2832); ctx.fill();
             ctx.globalAlpha = Math.min(1, tw + 0.12);
             ctx.fillStyle = "#ffffff";
             ctx.beginPath(); ctx.arc(sx, sy, s.r, 0, 6.2832); ctx.fill();
@@ -1354,6 +1423,483 @@ ccccccccccccccccccccccccccccc:'.
             cursor.style.transform = "translate(" + ringX + "px," + ringY + "px)";
           }
         }
+
+        /* ================= CRYSTAL GATE =================
+           After the loader the journey is held at a living gate: a silver
+           crystal with the Pisces constellation glowing inside it. The
+           first scroll / swipe / click / Enter shatters it — shards burst
+           outward and the freed stars fly to their anchors in the
+           background constellation, then the 5-stage journey takes over. */
+        var gateEl = document.getElementById("gate");
+        var gateCanvas = document.getElementById("gateCanvas");
+        var gtx = gateCanvas.getContext("2d");
+        var gW = 0, gH = 0;
+        var gateState = "waiting";   /* waiting | breaking | done */
+        var breakT0 = 0;
+        var shards = [];
+        var glitter = [];
+        var flyStars = [];
+        var cracks = [];
+        var dust = [];
+        var CP = [[0,-1],[0.52,-0.62],[0.62,0.05],[0.34,0.72],[0,1],[-0.34,0.72],[-0.62,0.05],[-0.52,-0.62],[-0.18,-0.35],[0.2,-0.3],[0,-0.02],[-0.22,0.3],[0.24,0.34],[0,0.62]];
+        var FACETS = [[0,7,8,0.10],[0,8,9,0.16],[0,9,1,0.07],[1,9,12,0.13],[1,12,2,0.06],[2,12,3,0.11],[3,12,13,0.08],[3,13,4,0.15],[4,13,5,0.07],[5,13,11,0.12],[5,11,6,0.06],[6,11,8,0.14],[6,8,7,0.08],[8,10,9,0.18],[9,10,12,0.09],[10,11,12,0.16],[8,11,10,0.05]];
+        /* abstract, organic crack web: crooked random-walk fractures that
+           start from scattered points (never one symmetric centre), wander
+           with uneven step lengths and angles, sprout thinner asymmetric
+           branches, and taper toward their tips — like real glass crazing */
+        (function makeCracks() {
+          function walk(x, y, ang, steps, sMin, sMax, wander) {
+            var pts = [[x, y]];
+            for (var s = 0; s < steps; s++) {
+              ang += (Math.random() - 0.5) * 2 * wander;
+              var len = sMin + Math.random() * (sMax - sMin);
+              x += Math.cos(ang) * len;
+              y += Math.sin(ang) * len * 1.05;
+              var e = Math.sqrt((x / 0.56) * (x / 0.56) + (y / 0.92) * (y / 0.92));
+              if (e > 1) { x /= e; y /= e; }
+              pts.push([x, y]);
+            }
+            return pts;
+          }
+          var primaries = 5 + Math.floor(Math.random() * 2);
+          for (var ci = 0; ci < primaries; ci++) {
+            var oa = Math.random() * 6.2832;
+            var orad = Math.random() * 0.30;
+            var ox = Math.cos(oa) * orad * 0.8, oy = Math.sin(oa) * orad;
+            var dir = oa + (Math.random() - 0.5) * 1.6;
+            var pts = walk(ox, oy, dir, 4 + Math.floor(Math.random() * 3), 0.13, 0.30, 0.5);
+            cracks.push({ pts: pts, w: 0.011 + Math.random() * 0.004, alpha: 0.92, delay: Math.random() * 0.30, span: 0.55 + Math.random() * 0.3, seed: Math.random() * 20 });
+            var nb = Math.random() < 0.7 ? 1 : 2;
+            for (var b = 0; b < nb; b++) {
+              var bi = 1 + Math.floor(Math.random() * (pts.length - 1));
+              var bp = pts[bi];
+              var bdir = Math.atan2(pts[bi][1] - pts[bi - 1][1], pts[bi][0] - pts[bi - 1][0]) + (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.65);
+              var bpts = walk(bp[0], bp[1], bdir, 2 + Math.floor(Math.random() * 3), 0.08, 0.20, 0.65);
+              cracks.push({ pts: bpts, w: 0.005 + Math.random() * 0.003, alpha: 0.78, delay: 0.15 + Math.random() * 0.4, span: 0.4 + Math.random() * 0.3, seed: Math.random() * 20 });
+            }
+          }
+        })();
+
+        function gateSize() {
+          gW = window.innerWidth; gH = window.innerHeight;
+          gateCanvas.width = gW * DPR; gateCanvas.height = gH * DPR;
+          gtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          dust = [];
+          var n = Math.min(44, Math.floor(gW * gH / 26000));
+          for (var i = 0; i < n; i++) {
+            dust.push({ x: Math.random() * gW, y: Math.random() * gH, r: 0.4 + Math.random() * 1.1, ph: Math.random() * 6.283, sp: 0.15 + Math.random() * 0.45 });
+          }
+        }
+        gateSize();
+        window.addEventListener("resize", gateSize);
+
+        function crystalMetrics(now) {
+          var R = Math.max(118, Math.min(Math.min(gW, gH) * 0.36, gH * 0.335, 285));
+          var rot = reduced ? 0 : Math.sin(now * 0.00045) * 0.022;
+          var bob = reduced ? 0 : Math.sin(now * 0.0009) * 7;
+          var shake = 0;
+          if (gateState === "breaking") {
+            var bt = (now - breakT0) / 900;
+            if (bt < 1) shake = Math.sin(now * 0.085) * 2.4 * (1 - bt);
+          }
+          return { R: R, cx: gW / 2 + shake, cy: gH * 0.44 + bob, rot: rot };
+        }
+        function toWorld(m, p) {
+          var c = Math.cos(m.rot), s = Math.sin(m.rot);
+          return [m.cx + (p[0] * c - p[1] * s) * m.R, m.cy + (p[0] * s + p[1] * c) * m.R];
+        }
+        function mapPisces(p) { return [(p[0] - 0.554) * 1.25, (p[1] - 0.48) * 1.25]; }
+
+        function crystalOutline() {
+          gtx.beginPath();
+          for (var i = 0; i < 8; i++) {
+            if (i === 0) gtx.moveTo(CP[0][0], CP[0][1]);
+            else gtx.lineTo(CP[i][0], CP[i][1]);
+          }
+          gtx.closePath();
+        }
+
+        function drawCrystal(now, m, crackP) {
+          var halo = gtx.createRadialGradient(m.cx, m.cy, 0, m.cx, m.cy, m.R * 2.0);
+          halo.addColorStop(0, "rgba(205,214,224,0.13)");
+          halo.addColorStop(0.55, "rgba(190,198,208,0.05)");
+          halo.addColorStop(1, "rgba(190,198,208,0)");
+          gtx.fillStyle = halo;
+          gtx.fillRect(m.cx - m.R * 2, m.cy - m.R * 2, m.R * 4, m.R * 4);
+
+          gtx.save();
+          gtx.translate(m.cx, m.cy);
+          gtx.rotate(m.rot);
+          gtx.scale(m.R, m.R);
+
+          crystalOutline();
+          var base = gtx.createLinearGradient(0, -1, 0, 1);
+          base.addColorStop(0, "rgba(216,224,233,0.16)");
+          base.addColorStop(0.5, "rgba(150,160,172,0.06)");
+          base.addColorStop(1, "rgba(228,234,240,0.13)");
+          gtx.fillStyle = base;
+          gtx.fill();
+
+          var fi, fa, fb, fc;
+          for (fi = 0; fi < FACETS.length; fi++) {
+            fa = CP[FACETS[fi][0]]; fb = CP[FACETS[fi][1]]; fc = CP[FACETS[fi][2]];
+            gtx.beginPath();
+            gtx.moveTo(fa[0], fa[1]); gtx.lineTo(fb[0], fb[1]); gtx.lineTo(fc[0], fc[1]);
+            gtx.closePath();
+            gtx.fillStyle = "rgba(236,241,246," + FACETS[fi][3].toFixed(3) + ")";
+            gtx.fill();
+            gtx.strokeStyle = "rgba(205,214,224,0.13)";
+            gtx.lineWidth = 0.006;
+            gtx.stroke();
+          }
+
+          if (!reduced) {
+            gtx.save();
+            crystalOutline();
+            gtx.clip();
+            var sx = Math.sin(now * 0.00038) * 1.45;
+            var sweep = gtx.createLinearGradient(sx - 0.38, 0, sx + 0.38, 0);
+            sweep.addColorStop(0, "rgba(255,255,255,0)");
+            sweep.addColorStop(0.5, "rgba(255,255,255,0.11)");
+            sweep.addColorStop(1, "rgba(255,255,255,0)");
+            gtx.rotate(-0.45);
+            gtx.fillStyle = sweep;
+            gtx.fillRect(sx - 0.38, -1.5, 0.76, 3);
+            gtx.restore();
+          }
+
+          /* the trapped constellation, glowing from inside */
+          var pulse = reduced ? 0.9 : 0.82 + 0.18 * Math.sin(now * 0.0016);
+          var boost = crackP > 0 ? crackP * 0.5 : 0;
+          var si, sa, sb;
+          for (var pass = 0; pass < 2; pass++) {
+            /* widths set in screen pixels (divided by the crystal scale):
+               a crisp ~1.5px core cord at ~0.75 opacity joining the small
+               star points — drawn any thicker it reads as a string of beads */
+            gtx.lineWidth = (pass === 0 ? 2.6 : 1.5) / m.R;
+            gtx.strokeStyle = pass === 0 ? "rgba(196,206,218," + (0.10 * pulse).toFixed(3) + ")" : "rgba(230,236,243," + Math.min(1, 0.75 * pulse + boost).toFixed(3) + ")";
+            gtx.lineCap = "round";
+            gtx.beginPath();
+            for (si = 0; si < PISCES.segs.length; si++) {
+              sa = mapPisces(PISCES.segs[si][0]); sb = mapPisces(PISCES.segs[si][1]);
+              gtx.moveTo(sa[0], sa[1]); gtx.lineTo(sb[0], sb[1]);
+            }
+            gtx.stroke();
+          }
+          for (si = 0; si < PISCES.starPts.length; si++) {
+            var spt = PISCES.starPts[si];
+            var mp = mapPisces(spt.p);
+            /* star discs are sized in SCREEN pixels, never scaled with the
+               crystal: chain stars ~6.5px across, Circlet ~5.5px, the knot
+               at most ~9.5px — true star points, not beads on a string */
+            var srPx = spt.r >= 4.4 ? 4.75 : (spt.r >= 3.2 ? 2.75 : 3.25);
+            var sr = srPx / m.R;
+            var sg = gtx.createRadialGradient(mp[0], mp[1], 0, mp[0], mp[1], sr * 1.4);
+            sg.addColorStop(0, "rgba(240,245,250," + (0.30 * pulse).toFixed(3) + ")");
+            sg.addColorStop(0.5, "rgba(210,218,228," + (0.09 * pulse).toFixed(3) + ")");
+            sg.addColorStop(1, "rgba(210,218,228,0)");
+            gtx.fillStyle = sg;
+            gtx.beginPath(); gtx.arc(mp[0], mp[1], sr * 1.4, 0, 6.2832); gtx.fill();
+            gtx.fillStyle = "#ffffff";
+            gtx.globalAlpha = Math.min(1, pulse + boost);
+            gtx.beginPath(); gtx.arc(mp[0], mp[1], sr, 0, 6.2832); gtx.fill();
+            gtx.globalAlpha = 1;
+          }
+
+          crystalOutline();
+          gtx.strokeStyle = "rgba(210,218,226,0.16)";
+          gtx.lineWidth = 0.055;
+          gtx.stroke();
+          crystalOutline();
+          gtx.strokeStyle = "rgba(238,242,246,0.8)";
+          gtx.lineWidth = 0.013;
+          gtx.stroke();
+
+          if (crackP > 0) {
+            gtx.lineCap = "round";
+            gtx.lineJoin = "round";
+            for (var ci2 = 0; ci2 < cracks.length; ci2++) {
+              var ck = cracks[ci2];
+              /* each fracture creeps in on its own delayed, uneven schedule */
+              var lp = Math.max(0, Math.min((crackP * 1.35 - ck.delay) / Math.max(ck.span, 0.001), 1));
+              if (lp <= 0) continue;
+              var nseg = ck.pts.length - 1;
+              var upto = lp * nseg;
+              for (var pj = 0; pj < nseg; pj++) {
+                var fseg = Math.min(upto - pj, 1);
+                if (fseg <= 0) break;
+                var pa = ck.pts[pj], pb = ck.pts[pj + 1];
+                /* fine trembling along the growing fracture */
+                var jx = Math.sin(now * 0.021 + ck.seed + pj * 2.3) * 0.0035 * crackP;
+                var jy = Math.cos(now * 0.017 + ck.seed * 1.7 + pj * 1.9) * 0.0035 * crackP;
+                var taper = 1 - 0.78 * (pj / Math.max(nseg - 1, 1));
+                gtx.strokeStyle = "rgba(245,248,251," + (ck.alpha * (0.45 + 0.55 * lp)).toFixed(3) + ")";
+                gtx.lineWidth = Math.max(ck.w * taper, 0.0016);
+                gtx.beginPath();
+                gtx.moveTo(pa[0] + jx * 0.6, pa[1] + jy * 0.6);
+                gtx.lineTo(pa[0] + (pb[0] - pa[0]) * fseg + jx, pa[1] + (pb[1] - pa[1]) * fseg + jy);
+                gtx.stroke();
+              }
+            }
+          }
+          gtx.restore();
+        }
+
+        /* irregular debris: every facet breaks into uneven jittered pieces —
+           some stay as larger crooked quads, others split again into slivers —
+           mixed with many tiny glass crumbs and a spray of glittering dust.
+           Each piece gets its own speed, spin, gravity and drag: big pieces
+           keep momentum and fall fast, small ones drift and linger. */
+        function buildShards(m) {
+          shards = [];
+          glitter = [];
+          function jit(v, amt) { return [v[0] + (Math.random() - 0.5) * amt, v[1] + (Math.random() - 0.5) * amt]; }
+          function addShard(pts, shade) {
+            var cen = [0, 0], i;
+            for (i = 0; i < pts.length; i++) { cen[0] += pts[i][0]; cen[1] += pts[i][1]; }
+            cen[0] /= pts.length; cen[1] /= pts.length;
+            var maxE = 0;
+            for (i = 0; i < pts.length; i++) maxE = Math.max(maxE, Math.hypot(pts[i][0] - cen[0], pts[i][1] - cen[1]));
+            var dx = cen[0] - m.cx, dy = cen[1] - m.cy;
+            var dl = Math.hypot(dx, dy) || 1;
+            var big = maxE > m.R * 0.16;
+            var speed = (90 + Math.random() * 330) * (big ? 1.05 : 0.72);
+            shards.push({
+              pts: pts.map(function (p) { return [p[0] - cen[0], p[1] - cen[1]]; }),
+              x: cen[0], y: cen[1],
+              vx: (dx / dl) * speed + (Math.random() - 0.5) * 130,
+              vy: (dy / dl) * speed + (Math.random() - 0.5) * 130 - (big ? 20 : 55),
+              vr: (Math.random() - 0.5) * (big ? 3.4 : 8.5),
+              rot0: Math.random() * 6.2832,
+              grav: big ? 65 + Math.random() * 70 : 10 + Math.random() * 26,
+              drag: big ? 0.05 + Math.random() * 0.10 : 0.35 + Math.random() * 0.45,
+              spd: 0.8 + Math.random() * 0.45,
+              fDelay: big ? Math.random() * 0.25 : 0.2 + Math.random() * 0.35,
+              fDur: 0.45 + Math.random() * 0.40,
+              shade: shade,
+              phase: Math.random() * 6.2832,
+              small: !big
+            });
+          }
+          for (var fi = 0; fi < FACETS.length; fi++) {
+            var f = FACETS[fi];
+            var w = [toWorld(m, CP[f[0]]), toWorld(m, CP[f[1]]), toWorld(m, CP[f[2]])];
+            var cen = [(w[0][0] + w[1][0] + w[2][0]) / 3, (w[0][1] + w[1][1] + w[2][1]) / 3];
+            var ja = m.R * 0.05;
+            var ip = [cen[0] + (Math.random() - 0.5) * m.R * 0.16, cen[1] + (Math.random() - 0.5) * m.R * 0.16];
+            var tris = [[w[0], w[1], ip], [w[1], w[2], ip], [w[2], w[0], ip]];
+            if (Math.random() < 0.4) {
+              var q0 = tris.shift(), q1 = tris.shift();
+              tris.unshift([q0[0], q0[1], q1[1], ip]);
+            }
+            tris.forEach(function (tri) {
+              var tp = tri.map(function (p) { return jit(p, ja); });
+              if (Math.random() < 0.45 && tp.length === 3) {
+                var mid = jit([(tp[0][0] + tp[1][0]) / 2, (tp[0][1] + tp[1][1]) / 2], ja * 1.4);
+                addShard([tp[0], mid, tp[2]], f[3]);
+                addShard([mid, tp[1], tp[2]], f[3] * (0.7 + Math.random() * 0.5));
+              } else {
+                addShard(tp, f[3] * (0.75 + Math.random() * 0.5));
+              }
+            });
+          }
+          /* crumbs: dozens of tiny uneven flecks scattered through the burst */
+          for (var ci = 0; ci < 30; ci++) {
+            var ang = Math.random() * 6.2832, rad = Math.sqrt(Math.random()) * 0.8;
+            var px = m.cx + Math.cos(ang) * rad * m.R * 0.62;
+            var py = m.cy + Math.sin(ang) * rad * m.R;
+            var sz = 1.5 + Math.random() * 4.5;
+            var cpts = [];
+            var cn = 3 + Math.floor(Math.random() * 2);
+            for (var cj = 0; cj < cn; cj++) {
+              var ca = cj / cn * 6.2832 + Math.random() * 0.7;
+              var cr2 = sz * (0.5 + Math.random() * 0.8);
+              cpts.push([px + Math.cos(ca) * cr2, py + Math.sin(ca) * cr2]);
+            }
+            addShard(cpts, 0.10 + Math.random() * 0.14);
+          }
+          /* glitter dust: pinpoint flecks that twinkle as they drift */
+          for (var gi = 0; gi < 42; gi++) {
+            var ga = Math.random() * 6.2832, gr = Math.sqrt(Math.random()) * 0.9;
+            var gx = m.cx + Math.cos(ga) * gr * m.R * 0.66, gy = m.cy + Math.sin(ga) * gr * m.R;
+            var gdx = gx - m.cx, gdy = gy - m.cy, gl2 = Math.hypot(gdx, gdy) || 1;
+            var gsp = 60 + Math.random() * 260;
+            glitter.push({
+              x: gx, y: gy,
+              vx: (gdx / gl2) * gsp + (Math.random() - 0.5) * 60,
+              vy: (gdy / gl2) * gsp + (Math.random() - 0.5) * 60 - 30,
+              r: 0.6 + Math.random() * 1.5,
+              ph: Math.random() * 6.2832,
+              fDelay: Math.random() * 0.3
+            });
+          }
+        }
+
+        function buildFlyStars(m) {
+          flyStars = [];
+          for (var i = 0; i < PISCES.starPts.length; i++) {
+            var s = PISCES.starPts[i];
+            var start = toWorld(m, mapPisces(s.p));
+            var tx = s.p[0] * gW, ty = s.p[1] * gH;
+            var dx = tx - start[0], dy = ty - start[1];
+            var len = Math.hypot(dx, dy) || 1;
+            var side = i % 2 === 0 ? 1 : -1;
+            flyStars.push({
+              sx: start[0], sy: start[1], tx: tx, ty: ty,
+              cx: (start[0] + tx) / 2 + (-dy / len) * len * 0.20 * side,
+              cy: (start[1] + ty) / 2 + (dx / len) * len * 0.20 * side - len * 0.06,
+              r: s.r,
+              r0: s.r >= 4.4 ? 4.75 : (s.r >= 3.2 ? 2.75 : 3.25),
+              delay: 0.04 + (s.at / PISCES.total) * 0.34
+            });
+          }
+        }
+
+        function finishGate() {
+          if (gateState === "done") return;
+          gateState = "done";
+          gateActive = false;
+          document.body.classList.remove("gate-on");
+          document.body.classList.remove("gate-locked");
+          document.documentElement.classList.remove("gate-locked");
+          gateEl.classList.add("gone");
+          window.scrollTo(0, 0);
+          setTimeout(function () { gateEl.style.display = "none"; }, 820);
+        }
+
+        function drawShatter(now) {
+          var el = now - breakT0;
+          var m = crystalMetrics(now);
+          /* beat one: cracks spread across the crystal for ~0.9s before it bursts */
+          if (el < 900) { var cp = el / 900; drawCrystal(now, m, Math.pow(cp, 0.75)); return; }
+          var st = Math.min((el - 900) / 2300, 1);
+          if (st < 0.42) {
+            var rp = st / 0.42;
+            gtx.strokeStyle = "rgba(220,228,236," + (0.30 * (1 - rp)).toFixed(3) + ")";
+            gtx.lineWidth = 1.6;
+            gtx.beginPath(); gtx.arc(m.cx, m.cy, m.R * (0.4 + rp * 2.6), 0, 6.2832); gtx.stroke();
+          }
+          var tSec = Math.max(el - 900, 0) / 1000;
+          for (var i = 0; i < shards.length; i++) {
+            var sh = shards[i];
+            var tt = tSec * sh.spd;
+            var keep = Math.max(1 - 0.5 * sh.drag * tt, 0.25);
+            var x = sh.x + sh.vx * tt * keep;
+            var y = sh.y + sh.vy * tt * keep + sh.grav * tt * tt;
+            var rot = sh.rot0 + sh.vr * tt;
+            var life = Math.max(0, Math.min((st - sh.fDelay) / Math.max(sh.fDur, 0.001), 1));
+            var aFade = Math.pow(1 - life, 1.3);
+            if (aFade <= 0.003) continue;
+            var co = Math.cos(rot), sn = Math.sin(rot);
+            /* glint: brightness swings as the tumbling face catches light */
+            var glint = 0.55 + 0.45 * Math.sin(rot * 2 + sh.phase);
+            gtx.beginPath();
+            for (var pj = 0; pj < sh.pts.length; pj++) {
+              var ox = sh.pts[pj][0], oy = sh.pts[pj][1];
+              var wx = x + ox * co - oy * sn, wy = y + ox * sn + oy * co;
+              if (pj === 0) gtx.moveTo(wx, wy); else gtx.lineTo(wx, wy);
+            }
+            gtx.closePath();
+            gtx.fillStyle = "rgba(228,234,241," + (aFade * (0.10 + sh.shade * glint)).toFixed(3) + ")";
+            gtx.fill();
+            gtx.strokeStyle = "rgba(240,245,250," + (aFade * (0.25 + 0.50 * glint)).toFixed(3) + ")";
+            gtx.lineWidth = sh.small ? 0.6 : 1;
+            gtx.stroke();
+          }
+          for (var gi2 = 0; gi2 < glitter.length; gi2++) {
+            var gp = glitter[gi2];
+            var gt = tSec * 0.9;
+            var gx2 = gp.x + gp.vx * gt * Math.max(1 - 0.3 * gt, 0.3);
+            var gy2 = gp.y + gp.vy * gt * Math.max(1 - 0.3 * gt, 0.3) + 14 * gt * gt;
+            var ga2 = Math.max(0, 1 - Math.max((st - gp.fDelay) / 0.7, 0)) * (0.35 + 0.55 * (0.5 + 0.5 * Math.sin(now * 0.02 + gp.ph)));
+            if (ga2 <= 0.01) continue;
+            gtx.globalAlpha = Math.min(ga2, 1);
+            gtx.fillStyle = "#eef2f6";
+            gtx.beginPath(); gtx.arc(gx2, gy2, gp.r, 0, 6.2832); gtx.fill();
+          }
+          gtx.globalAlpha = 1;
+          for (var j = 0; j < flyStars.length; j++) {
+            var fs = flyStars[j];
+            var ft = Math.max(0, Math.min((st - fs.delay) / 0.55, 1));
+            if (ft <= 0) continue;
+            var e = ft < 0.5 ? 4 * ft * ft * ft : 1 - Math.pow(-2 * ft + 2, 3) / 2;
+            var bez = function (ee) {
+              var u = 1 - ee;
+              return [u * u * fs.sx + 2 * u * ee * fs.cx + ee * ee * fs.tx,
+                      u * u * fs.sy + 2 * u * ee * fs.cy + ee * ee * fs.ty];
+            };
+            var fpos = bez(e);
+            var ix = fpos[0], iy = fpos[1];
+            var rr = fs.r0 + (fs.r - fs.r0) * e;
+            var al = ft > 0.92 ? (1 - ft) / 0.08 : 1;
+            /* fading light trail along the flight curve */
+            if (ft < 1 && e > 0.02) {
+              var bk = Math.max(0, e - 0.20);
+              gtx.beginPath();
+              for (var tp = 0; tp <= 4; tp++) {
+                var pp = bez(bk + (e - bk) * (tp / 4));
+                if (tp === 0) gtx.moveTo(pp[0], pp[1]); else gtx.lineTo(pp[0], pp[1]);
+              }
+              gtx.strokeStyle = "rgba(205,214,224," + (0.34 * al).toFixed(3) + ")";
+              gtx.lineWidth = 1.5;
+              gtx.lineCap = "round";
+              gtx.stroke();
+            }
+            var gl = gtx.createRadialGradient(ix, iy, 0, ix, iy, rr * 1.4);
+            gl.addColorStop(0, "rgba(238,243,248," + (0.38 * al).toFixed(3) + ")");
+            gl.addColorStop(1, "rgba(210,218,228,0)");
+            gtx.fillStyle = gl;
+            gtx.beginPath(); gtx.arc(ix, iy, rr * 1.4, 0, 6.2832); gtx.fill();
+            gtx.globalAlpha = al;
+            gtx.fillStyle = "#ffffff";
+            gtx.beginPath(); gtx.arc(ix, iy, rr, 0, 6.2832); gtx.fill();
+            gtx.globalAlpha = 1;
+          }
+          if (el >= 3260) finishGate();
+        }
+
+        function drawGate(now) {
+          if (gateState === "done") return;
+          gtx.clearRect(0, 0, gW, gH);
+          for (var i = 0; i < dust.length; i++) {
+            var d = dust[i];
+            var dyy = d.y;
+            if (!reduced) { dyy = (d.y - now * 0.004 * d.sp) % gH; if (dyy < 0) dyy += gH; }
+            var dxx = d.x + (reduced ? 0 : Math.sin(now * 0.0004 + d.ph) * 9);
+            gtx.globalAlpha = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(now * 0.001 + d.ph));
+            gtx.fillStyle = "#cfd6de";
+            gtx.beginPath(); gtx.arc(dxx, dyy, d.r, 0, 6.2832); gtx.fill();
+          }
+          gtx.globalAlpha = 1;
+          if (gateState === "breaking") drawShatter(now);
+          else drawCrystal(now, crystalMetrics(now), 0);
+          if (gateState !== "done") requestAnimationFrame(drawGate);
+        }
+
+        function startBreak() {
+          if (!gateArmed || gateState !== "waiting") return;
+          if (reduced) { finishGate(); return; }
+          var m = crystalMetrics(performance.now());
+          buildShards(m);
+          buildFlyStars(m);
+          gateState = "breaking";
+          breakT0 = performance.now();
+        }
+        document.getElementById("gateEnter").addEventListener("click", function (ev) { ev.stopPropagation(); startBreak(); });
+        gateEl.addEventListener("click", function () { startBreak(); });
+        window.addEventListener("wheel", function (ev) {
+          if (gateState !== "done") { ev.preventDefault(); startBreak(); }
+        }, { passive: false });
+        window.addEventListener("touchmove", function (ev) {
+          if (gateState !== "done") { ev.preventDefault(); startBreak(); }
+        }, { passive: false });
+        window.addEventListener("keydown", function (ev) {
+          if (gateState !== "done" && (ev.key === "Enter" || ev.key === " " || ev.key === "ArrowDown" || ev.key === "PageDown")) {
+            ev.preventDefault();
+            startBreak();
+          }
+        });
+        requestAnimationFrame(drawGate);
 
         fireStageFx(0);
         requestAnimationFrame(render);
