@@ -63,13 +63,22 @@
 
 /* ============ left side: the emblem ============ */
 .fin-left {
+  position: relative; overflow: hidden;
   border-right: 1px solid var(--fin-line-soft);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1.4vh; padding: 2.4vh 1.6vw;
   background: radial-gradient(circle at 50% 42%, rgba(196,206,218,.05), rgba(196,206,218,0) 62%);
   min-height: 0;
 }
-.fin-emblem-wrap { width: min(100%, 63vh); position: relative; }
+.fin-emblem-wrap { width: min(100%, 63vh); position: relative; z-index: 1; }
+/* scattered starfield across the whole left panel, around the emblem */
+.fin-stars { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.fin-stars i {
+  position: absolute; border-radius: 50%; background: #e9eff6; opacity: 0;
+  animation: finStarIn .9s ease both, finTwinkleSoft var(--t, 3.4s) ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s), calc(var(--d, 0s) + 1.2s);
+}
+@keyframes finTwinkleSoft { from { opacity: .12; } to { opacity: .85; } }
 .fin-emblem-wrap > svg { display: block; width: 100%; height: auto; position: relative; z-index: 1; }
 /* frosted-glass disc behind the fish artwork: blurred backdrop, a
    lit rim, a soft shadow and a curved gloss sheen across its top */
@@ -271,6 +280,7 @@
   .fin-art { animation: none; opacity: 1; }
   .fin-glowpulse { animation: none; }
   .fin-twinkle { animation: none; opacity: .8; }
+  .fin-stars i { animation: none; opacity: .5; }
   .fin-spin, .fin-orbit, .fin-ghost-bob { animation: none; }
   .fin-tears-type .fin-caret { animation: none; }
   .fin-os-stage { transition: none; }
