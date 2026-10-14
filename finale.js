@@ -169,6 +169,7 @@ var ART_PATHS = [
       '<div class="fin-main">' +
 
         '<aside class="fin-left fin-rise" style="transition-delay:.04s" aria-label="Emblem dua ikan: artwork milik pemilik situs — dua siluet ikan gelap di atas cakram kaca buram, berputar perlahan mengelilingi glif di tengahnya">' +
+          '<div class="fin-stars" id="finStars" aria-hidden="true"></div>' +
           '<div class="fin-emblem-wrap">' +
             '<div class="fin-glass-disc" aria-hidden="true"></div>' +
             '<svg id="finEmblemSvg" viewBox="0 0 512 512" role="img" aria-label="Dua siluet ikan gelap di atas cakram kaca buram, berputar perlahan mengelilingi sebuah glif di pusat, di dalam cincin ganda tipis"></svg>' +
@@ -290,6 +291,25 @@ var ART_PATHS = [
     '</div>';
 
   buildEmblem();
+  buildStars();
+
+  /* scattered stars across the left panel, around the emblem —
+     deterministic pseudo-random so the sky is stable on every load */
+  function buildStars() {
+    var holder = document.getElementById("finStars");
+    if (!holder) return;
+    var seed = 987654321;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+    var html = "";
+    for (var i = 0; i < 90; i++) {
+      var x = (rnd() * 100).toFixed(2), y = (rnd() * 100).toFixed(2);
+      var s = (0.8 + rnd() * 1.9).toFixed(1);
+      var big = rnd() > 0.88;
+      if (big) s = (2.6 + rnd() * 1.2).toFixed(1);
+      html += '<i style="left:' + x + '%;top:' + y + '%;width:' + s + 'px;height:' + s + 'px;--d:' + (rnd() * 2.4).toFixed(2) + 's;--t:' + (2.6 + rnd() * 2.2).toFixed(2) + 's' + (big ? ';box-shadow:0 0 6px 1px rgba(233,239,246,.55)' : '') + '"></i>';
+    }
+    holder.innerHTML = html;
+  }
 
   /* ================= SYSTEM — OS LOGO ROTATION =================
      Cycles Fedora -> Arch -> Debian -> NixOS every ~2.5 s with a
@@ -437,7 +457,9 @@ var ART_PATHS = [
   if (replayBtn) replayBtn.addEventListener("click", function () {
     /* PUTAR ULANG: restart the whole site from the loading screen */
     try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (err) {}
-    window.location.reload();
+    /* navigate to a fresh URL so no cached copy of the page or its
+       scripts can survive — the site restarts from its loading screen */
+    window.location.replace(window.location.pathname + "?replay=" + Date.now());
   });
   document.addEventListener("keydown", function (e) {
     if (isOpen && e.key === "Escape") closeFinale();
