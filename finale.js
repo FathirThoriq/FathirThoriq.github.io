@@ -435,9 +435,9 @@ var ART_PATHS = [
   if (openBtn) openBtn.addEventListener("click", openFinale);
   if (closeBtn) closeBtn.addEventListener("click", closeFinale);
   if (replayBtn) replayBtn.addEventListener("click", function () {
-    if (!isOpen) return;
-    closeFinale();
-    setTimeout(openFinale, 700); /* close, then run the whole entrance again */
+    /* PUTAR ULANG: restart the whole site from the loading screen */
+    try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (err) {}
+    window.location.reload();
   });
   document.addEventListener("keydown", function (e) {
     if (isOpen && e.key === "Escape") closeFinale();
