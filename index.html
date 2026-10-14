@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="finale.css" />
     <style>
       :root {
         --bg: #0d1117;
@@ -968,7 +969,7 @@ ccccccccccccccccccccccccccccc:'.
           <div class="stage-head"><h2>Projects</h2><span class="stage-note">things i built</span></div>
           <article class="project-featured">
             <h3>
-              <svg class="ghost" width="26" height="30" viewBox="0 0 26 30" aria-hidden="true">
+              <svg class="ghost fin-ghost-bob" width="26" height="30" viewBox="0 0 26 30" aria-hidden="true">
                 <path d="M13 1.5 C7 1.5 3 6 3 12.5 L3 28 L6.8 24.6 L10.2 28 L13.4 24.9 L16.6 28 L20 24.6 L23 28 L23 12.5 C23 6 19 1.5 13 1.5 Z" fill="none" stroke="#e8e8e8" stroke-width="1.8" stroke-linejoin="round" />
                 <circle cx="9.2" cy="12.5" r="1.7" fill="#e8e8e8" />
                 <circle cx="16.8" cy="12.5" r="1.7" fill="#e8e8e8" />
@@ -1002,6 +1003,7 @@ ccccccccccccccccccccccccccccc:'.
               <a href="mailto:fathirthoriq9@gmail.com">fathirthoriq9@gmail.com</a>
             </nav>
           </footer>
+          <button id="finaleOpenBtn" class="fin-open-btn" type="button">BUKA HALAMAN UTAMA ↓</button>
         </div>
       </section>
     </main>
@@ -1910,5 +1912,7 @@ ccccccccccccccccccccccccccccc:'.
         requestAnimationFrame(render);
       })();
     </script>
+    <div id="finale-root" hidden></div>
+    <script src="finale.js" defer></script>
   </body>
 </html>
